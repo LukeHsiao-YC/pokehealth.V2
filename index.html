@@ -300,7 +300,7 @@ const STAGES = [
 const BOSS_STAGE = {
     name: "隱藏關卡：代謝地獄",
     bg: "bg-boss-sugar",
-    intro: "所有壞習慣的集合體...代謝大魔王現身了！\n它會不斷變換屬性，請小心應對！",
+    intro: "所有壞習慣的集合體...代謝大魔王現身了！\n它體力驚人，且會不斷變換屬性！",
     enemyConfig: { id: 150, name: "代謝大魔王 (變幻)", role: "sugar", customMoves: ["Psychic", "Amnesia", "Recover", "Swift"] }
 };
 
@@ -609,6 +609,8 @@ class BattleSystem {
         loop();
     }
 
+    // --- Game Logic ---
+
     async startAdventureStage(idx) {
         if (idx >= STAGES.length) {
             this.showVictoryScene(); 
@@ -672,7 +674,8 @@ class BattleSystem {
 
         try {
             const enemy = await this.fetchPokemon(BOSS_STAGE.enemyConfig);
-            enemy.stats.maxHp *= 1.5;
+            // Boost Boss HP significantly: 5x
+            enemy.stats.maxHp *= 5.0; 
             enemy.stats.currentHp = enemy.stats.maxHp;
             
             this.eTeam = [enemy];
@@ -1140,7 +1143,6 @@ class BattleSystem {
             btnBoss.className = 'restart-btn btn-boss';
             btnBoss.innerText = '👿 挑戰隱藏魔王 (最終試煉)';
             btnBoss.onclick = () => {
-                // Remove specific victory sprites container
                 const container = document.getElementById('victory-party');
                 if(container) container.remove();
                 
