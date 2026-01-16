@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>健康大師：代謝之戰 - 終極挑戰</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #202020;
+            --text-color: #333;
+            --ui-bg: #f8f9fa;
+            --ui-border: #4a4a4a;
+            --hp-green: #48c075;
+            --hp-yellow: #f5ac38;
+            --hp-red: #e64e4e;
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            font-family: 'Press Start 2P', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        #game-boy {
+            width: 100%;
+            max-width: 800px;
+            height: 98vh;
+            background: #d0d0d0;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            font-size: 16px;
+        }
+
+        #battle-scene {
+            flex: 2;
+            background-size: cover;
+            background-position: center bottom;
+            position: relative;
+            transition: background 0.5s, filter 0.5s;
+            overflow: hidden;
+            border-bottom: 4px solid #333;
+        }
+        
+        .bg-park { background: linear-gradient(to bottom, #87CEEB 0%, #a8e063 100%); }
+        .bg-forest { background: linear-gradient(to bottom, #56ab2f 0%, #a8e063 100%); }
+        .bg-city { background: linear-gradient(to bottom, #2c3e50 0%, #bdc3c7 100%); }
+        .bg-gym { background: linear-gradient(to bottom, #ff9966 0%, #ff5e62 100%); }
+        /* Boss Backgrounds */
+        .bg-boss-sugar { background: linear-gradient(to bottom, #ff9a9e 0%, #fecfef 100%); }
+        .bg-boss-lazy { background: linear-gradient(to bottom, #a18cd1 0%, #fbc2eb 100%); }
+        .bg-boss-junk { background: linear-gradient(to bottom, #434343 0%, #000000 100%); }
+
+        .platform {
+            position: absolute;
+            width: 220px;
+            height: 70px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50%;
+            transform: scaleY(0.4);
+            filter: blur(8px);
+        }
+        #enemy-platform { top: 35%; right: 10%; }
+        #player-platform { bottom: 20%; left: 10%; }
+
+        .sprite {
+            position: absolute;
+            image-rendering: pixelated;
+            transition: filter 0.2s, transform 0.2s, opacity 0.5s;
+            opacity: 0;
+            display: block;
+            object-fit: contain;
+        }
+        
+        #enemy-sprite {
+            top: 15%; right: 12%; 
+            height: 150px; width: 150px;
+            z-index: 10;
+        }
+
+        #player-sprite {
+            bottom: 22%; left: 12%; 
+            height: 180px; width: 180px;
+            z-index: 20;
+        }
+
+        /* Battle Animations */
+        .anim-shake { animation: shake 0.5s; }
+        .anim-attack-p { animation: attack-lunge 0.2s; }
+        .anim-attack-e { animation: enemy-lunge 0.2s; }
+        .anim-faint { animation: faint 1s forwards; }
+        .anim-heal { filter: drop-shadow(0 0 10px #48c075); animation: pulse-green 1s; }
+        .anim-buff { filter: drop-shadow(0 0 10px #e64e4e); animation: pulse-red 1s; }
+        /* Boss Transformation Animation */
+        .anim-transform { animation: spin-color 1s; }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-10px) brightness(2) sepia(1) saturate(5) hue-rotate(-50deg); } 
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(5px); }
+            100% { transform: translateX(0); filter: none;}
+        }
+        @keyframes attack-lunge { 0% { transform: translate(0,0); } 50% { transform: translate(40px, -40px); } 100% { transform: translate(0,0); } }
+        @keyframes enemy-lunge { 0% { transform: translate(0,0); } 50% { transform: translate(-40px, 40px); } 100% { transform: translate(0,0); } }
+        @keyframes faint { to { transform: translateY(50px); opacity: 0; } }
+        @keyframes pulse-green { 0% { transform: scale(1); } 50% { transform: scale(1.1); filter: brightness(1.5); } 100% { transform: scale(1); } }
+        @keyframes pulse-red { 0% { transform: scale(1); } 50% { transform: scale(1.1); filter: sepia(1) hue-rotate(-50deg) saturate(3); } 100% { transform: scale(1); } }
+        @keyframes jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-30px); } }
+        @keyframes spin-color { 0% { filter: hue-rotate(0deg) brightness(2); } 100% { filter: hue-rotate(360deg) brightness(1); } }
+
+        /* HUD */
+        .hud-box {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid #333;
+            border-radius: 12px 2px 12px 2px;
+            padding: 12px;
+            width: 280px;
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
+            transition: opacity 0.3s;
+            z-index: 30;
+        }
+        #enemy-hud { top: 20px; left: 20px; }
+        #player-hud { bottom: 20px; right: 20px; }
+
+        .name-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; font-weight: bold; }
+        .hp-container {
+            width: 100%; height: 16px; background: #ddd; border: 3px solid #333; border-radius: 8px; overflow: hidden;
+        }
+        .hp-bar { height: 100%; background: var(--hp-green); width: 100%; transition: width 0.5s ease-out, background-color 0.3s; }
+        .hp-text { font-size: 12px; text-align: right; margin-top: 6px; font-weight: bold; }
+        .status-badges { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+        .badge { font-size: 10px; padding: 4px 6px; color: white; border-radius: 4px; text-shadow: 1px 1px 0 #000; }
+
+        /* UI Layer */
+        #ui-layer {
+            height: 280px; flex-shrink: 0; background: #222; padding: 15px; display: flex; flex-direction: column; gap: 10px; border-top: 6px solid #f8d030; position: relative;
+        }
+        #dialogue-box {
+            background: #3a3a3a; color: white; border: 4px solid #fff; border-radius: 8px; padding: 15px; height: 100px; font-size: 16px; line-height: 1.5; position: relative; cursor: pointer; overflow-y: hidden;
+        }
+        #dialogue-box::after { content: '▼'; position: absolute; bottom: 10px; right: 10px; animation: bounce 1s infinite; font-size: 20px; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+
+        #controls { display: flex; height: 120px; gap: 10px; }
+        #main-menu, #move-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; height: 100%; }
+        
+        .btn {
+            background: #f8f9fa; border: 4px solid #4a4a4a; border-radius: 8px; font-family: 'Press Start 2P', sans-serif; font-size: 14px; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 5px; position: relative; box-shadow: 0 4px 0 #bbb; transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 0 0 #bbb; }
+        .btn:hover { background: #e8e8e8; border-color: #e64e4e; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; background: #ccc; }
+        .move-type-icon { font-size: 10px; opacity: 0.7; margin-top: 5px; }
+        #move-menu { display: none; }
+
+        /* Overlays (Bag/Party) */
+        .overlay-menu {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 30, 30, 0.98); padding: 20px; flex-direction: column; gap: 10px; z-index: 50; overflow-y: auto;
+        }
+        .overlay-title { color: white; font-size: 18px; margin-bottom: 10px; text-align: center; border-bottom: 2px solid white; padding-bottom: 10px;}
+        
+        .list-slot {
+            background: white; border: 4px solid #555; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 60px;
+        }
+        .list-slot:hover { border-color: #e64e4e; background: #fff5f5; }
+        .list-slot.active { border-color: #48bb78; background: #f0fff4; }
+        .list-slot.fainted { background: #ccc; opacity: 0.7; }
+        
+        .item-count { background: #e64e4e; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; font-size: 12px; font-weight: bold;}
+
+        #fx-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
+        
+        #loader {
+            position: absolute; top:0; left:0; width:100%; height:100%; background: #202020; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; font-size: 20px; text-align: center; line-height: 1.5;
+        }
+        .spinner { width: 50px; height: 50px; border: 5px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 1s infinite linear; margin-bottom: 20px;}
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Restart Menu Special */
+        .restart-menu { display: flex; flex-direction: column; gap: 15px; width: 100%; height: 100%; }
+        .restart-btn { flex: 1; font-size: 16px; border: 4px solid #4a4a4a; border-radius: 8px; cursor: pointer; font-weight: bold; background: #fff; transition: 0.2s;}
+        .restart-btn:hover { background: #ffeb3b; transform: scale(1.02); }
+        .btn-boss { background: #e64e4e; color: white; border-color: #8b0000; }
+        .btn-boss:hover { background: #ff6b6b; }
+    </style>
+</head>
+<body>
+
+<div id="game-boy">
+    <div id="loader">
+        <div class="spinner"></div>
+        <div>正在連接 PokéAPI...</div>
+        <div style="font-size: 14px; margin-top: 15px; color:#aaa;">配置：花椰猴 & 掉寶系統<br>載入大魔王數據...</div>
+    </div>
+
+    <canvas id="fx-canvas"></canvas>
+
+    <div id="battle-scene" class="bg-forest">
+        <!-- HUDs -->
+        <div id="enemy-hud" class="hud-box" style="opacity:0;">
+            <div class="name-row"><span id="e-name">...</span></div>
+            <div class="hp-container"><div id="e-hp-bar" class="hp-bar"></div></div>
+            <div class="status-badges" id="e-badges"></div>
+        </div>
+
+        <div id="player-hud" class="hud-box" style="opacity:0;">
+            <div class="name-row"><span id="p-name">...</span></div>
+            <div class="hp-container"><div id="p-hp-bar" class="hp-bar"></div></div>
+            <div class="hp-text"><span id="p-hp-cur">0</span> / <span id="p-hp-max">0</span></div>
+            <div class="status-badges" id="p-badges"></div>
+        </div>
+
+        <div class="platform" id="enemy-platform"></div>
+        <img id="enemy-sprite" class="sprite" src="" alt="Enemy">
+        
+        <div class="platform" id="player-platform"></div>
+        <img id="player-sprite" class="sprite" src="" alt="Player">
+    </div>
+
+    <div id="ui-layer">
+        <div id="dialogue-box" onclick="battle.advanceText()">初始化中...</div>
+
+        <div id="controls">
+            <div id="main-menu">
+                <button class="btn" onclick="battle.toMoveMenu()">⚔️ 戰鬥</button>
+                <button class="btn" onclick="battle.showBag()">🎒 背包</button>
+                <button class="btn" onclick="battle.openPartyMenu(false)">👥 精靈</button>
+                <button class="btn" onclick="battle.run()">🏃 逃跑</button>
+            </div>
+            <div id="move-menu"></div>
+            <!-- Overlays -->
+            <div id="party-menu" class="overlay-menu"></div>
+            <div id="bag-menu" class="overlay-menu"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+/** * Game Data & Config 
+ */
+const PLAYER_CONFIG = [
+    { 
+        id: 68, name: "怪力 (運動)", role: "fighting", 
+        customMoves: ["Cross Chop", "Vital Throw", "Strength", "Bulk Up"] 
+    },
+    { 
+        id: 511, name: "花椰猴 (擇食)", role: "grass", 
+        customMoves: ["Seed Bomb", "Energy Ball", "Grass Knot", "Work Up"] 
+    },
+    { 
+        id: 9, name: "水箭龜 (水分)", role: "water", 
+        customMoves: ["Hydro Pump", "Aqua Ring", "Rain Dance", "Protect"] 
+    },
+    { 
+        id: 448, name: "路卡利歐 (自律)", role: "fighting", 
+        customMoves: ["Aura Sphere", "Calm Mind", "Close Combat", "Quick Attack"] 
+    }
+];
+
+const STAGES = [
+    {
+        name: "第一關：慵懶草原",
+        bg: "bg-park",
+        intro: "這裡的空氣懶洋洋的，大家都只想躺著...\n小心！懶散會傳染！",
+        enemyConfig: { id: 287, name: "懶人獺 (懶散)", role: "lazy", customMoves: ["Slack Off", "Yawn", "Scratch", "Amnesia"] }
+    },
+    {
+        name: "第二關：糖果森林",
+        bg: "bg-forest",
+        intro: "空氣中瀰漫著甜膩的味道...\n小心！糖癮會導致胰島素阻抗！",
+        enemyConfig: { id: 584, name: "雙倍多多冰 (糖癮)", role: "sugar", customMoves: ["Icicle Crash", "Sweet Scent", "Avalanche", "Blizzard"] }
+    },
+    {
+        name: "第三關：沙發山谷",
+        bg: "bg-gym",
+        intro: "這裡的居民整天躺著不動...\n久坐是萬病之源！",
+        enemyConfig: { id: 143, name: "卡比獸 (久坐)", role: "lazy", customMoves: ["Yawn", "Rest", "Body Slam", "Snore"] }
+    },
+    {
+        name: "第四關：垃圾掩埋場",
+        bg: "bg-city",
+        intro: "充滿了加工食品和油炸味...\n垃圾食物會造成身體發炎！",
+        enemyConfig: { id: 89, name: "臭臭泥 (毒素)", role: "junk", customMoves: ["Sludge Bomb", "Gunk Shot", "Toxic", "Belch"] }
+    }
+];
+
+// BOSS STAGE CONFIG
+const BOSS_STAGE = {
+    name: "隱藏關卡：代謝地獄",
+    bg: "bg-boss-sugar",
+    intro: "所有壞習慣的集合體...代謝大魔王現身了！\n它會不斷變換屬性，請小心應對！",
+    enemyConfig: { id: 150, name: "代謝大魔王 (變幻)", role: "sugar", customMoves: ["Psychic", "Amnesia", "Recover", "Swift"] } // Mewtwo as Boss
+};
+
+// Item Definitions
+const ITEMS = {
+    'fresh_water': { name: "礦泉水", effect: "heal", value: 50, desc: "補充水分，恢復 50 點體力。" },
+    'berry_salad': { name: "蔬果沙拉", effect: "heal", value: 100, desc: "豐富纖維，恢復 100 點體力。" },
+    'protein_bar': { name: "蛋白棒", effect: "buff", value: 1.5, desc: "補充蛋白質，提升攻擊力。" }
+};
+
+const HEALTH_TYPE_CHART = {
+    'lazy': { 'fighting': 2.0, 'grass': 0.5, 'water': 0.5 }, 
+    'sugar': { 'water': 2.0, 'grass': 2.0, 'fighting': 1.0 }, 
+    'junk': { 'grass': 2.0, 'water': 1.5, 'fighting': 1.0 }   
+};
+
+const EDU_TEXT = {
+    // Player Moves
+    "cross-chop": "交叉訓練能全面提升心肺與肌耐力！",
+    "vital-throw": "核心肌群是身體穩定的關鍵，避免受傷！",
+    "strength": "負重運動能增加骨質密度，預防骨折。",
+    "bulk-up": "增加肌肉量可提升基礎代謝率，躺著也燃脂！",
+    
+    // Pansage Moves
+    "seed-bomb": "堅果種子富含好油，保護心血管健康。",
+    "energy-ball": "全穀根莖類提供身體長效的能量來源。",
+    "grass-knot": "用膳食纖維把多餘的油脂綁住，排出體外！",
+    "work-up": "設立健康的飲食目標，一步步激勵自己達成。",
+    
+    "hydro-pump": "每天喝足 1500cc 水，促進體內廢物代謝。",
+    "aqua-ring": "飯前喝水能增加飽足感，避免暴飲暴食。",
+    "rain-dance": "運動流汗後，記得補充水分與電解質。",
+    "protect": "拒絕含糖飲料，保護胰臟，遠離糖尿病！",
+    
+    "aura-sphere": "專注當下，細嚼慢嚥讓大腦接收飽足訊號。",
+    "calm-mind": "壓力大時容易暴食，深呼吸放鬆心情。",
+    "close-combat": "積極對抗想偷懶的念頭，建立運動習慣！",
+    "quick-attack": "把握零碎時間動一動，積少成多也能消耗熱量。",
+
+    // Enemy Moves & Boss Moves
+    "slack-off": "能坐就不站，能躺就不坐，熱量消耗極低。",
+    "yawn": "久坐不動會讓下肢血液循環變差，代謝變慢。",
+    "scratch": "無所事事，缺乏生活目標與動力。",
+    "amnesia": "忘記了要運動的承諾，明天再說吧。",
+    "icicle-crash": "手搖飲的果糖會直接堆積成肝臟脂肪！",
+    "sweet-scent": "甜味會讓大腦多巴胺上癮，越吃越想吃。",
+    "avalanche": "血糖像雲霄飛車忽高忽低，容易疲勞嗜睡。",
+    "blizzard": "過量冰品糖分熱量超標，影響正餐食慾。",
+    "rest": "睡完午覺還是累？可能是肥胖導致睡眠呼吸中止。",
+    "body-slam": "體重過重會對膝蓋關節造成巨大負擔。",
+    "snore": "打呼是呼吸道阻塞警訊，影響生長激素分泌。",
+    "sludge-bomb": "油炸物產生自由基，攻擊體內正常細胞。",
+    "gunk-shot": "過多飽和脂肪酸會阻塞血管，引發心血管疾病。",
+    "toxic": "加工肉品含亞硝酸鹽，是致癌風險因子。",
+    "belch": "狼吞虎嚥容易脹氣消化不良，增加腸胃負擔。",
+    
+    // Boss General Moves
+    "psychic": "壞習慣會控制你的大腦，讓你無法抗拒誘惑！",
+    "recover": "如果不徹底改變生活型態，復胖機率很高！",
+    "swift": "健康殺手無所不在，隨時都可能影響你。",
+    "transform": "壞習慣會偽裝成各種形式，例如隱形糖分！"
+};
+
+const MOVE_VISUALS = {
+    "aura-sphere": "projectile_blue", "sludge-bomb": "projectile_purple", "energy-ball": "projectile_green", 
+    "gunk-shot": "projectile_purple", "toxic": "projectile_purple", "seed-bomb": "projectile_green",
+    "hydro-pump": "beam_blue", "blizzard": "beam_white", "icicle-crash": "beam_white",
+    "cross-chop": "impact_red", "vital-throw": "impact_red", "close-combat": "impact_red", "body-slam": "impact_white",
+    "quick-attack": "impact_white", "strength": "impact_white", "scratch": "impact_white", "avalanche": "impact_white",
+    "grass-knot": "impact_green", "psychic": "impact_purple", "swift": "projectile_white",
+    "bulk-up": "buff_red", "calm-mind": "buff_pink", "aqua-ring": "buff_blue",
+    "protect": "buff_blue", "rest": "buff_pink", "slack-off": "buff_pink", "yawn": "buff_white", "work-up": "buff_red",
+    "recover": "buff_green", "amnesia": "buff_pink",
+    "rain-dance": "weather_rain", "sweet-scent": "weather_pink"
+};
+
+const ANIM_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/";
+const STATIC_URL = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/";
+
+class BattleSystem {
+    constructor() {
+        this.pTeam = [];
+        this.eTeam = [];
+        this.bag = { 'fresh_water': 1 }; // Start with 1 water
+        this.pActive = 0;
+        this.currentStageIdx = 0;
+        this.isBossFight = false;
+        this.state = 'LOADING'; 
+        
+        this.els = {
+            dialogue: document.getElementById('dialogue-box'),
+            moveMenu: document.getElementById('move-menu'),
+            mainMenu: document.getElementById('main-menu'),
+            partyMenu: document.getElementById('party-menu'),
+            bagMenu: document.getElementById('bag-menu'),
+            pSprite: document.getElementById('player-sprite'),
+            eSprite: document.getElementById('enemy-sprite'),
+            pHpBar: document.getElementById('p-hp-bar'),
+            eHpBar: document.getElementById('e-hp-bar'),
+            pHpText: document.getElementById('p-hp-cur'),
+            pName: document.getElementById('p-name'),
+            eName: document.getElementById('e-name'),
+            scene: document.getElementById('battle-scene'),
+            enemyHud: document.getElementById('enemy-hud'),
+            playerHud: document.getElementById('player-hud'),
+            loader: document.getElementById('loader'),
+            canvas: document.getElementById('fx-canvas')
+        };
+        
+        this.ctx = this.els.canvas.getContext('2d');
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+
+        this.init();
+    }
+
+    resizeCanvas() {
+        this.els.canvas.width = this.els.canvas.offsetWidth;
+        this.els.canvas.height = this.els.canvas.offsetHeight;
+    }
+
+    async init() {
+        try {
+            this.pTeam = await Promise.all(PLAYER_CONFIG.map(p => this.fetchPokemon(p)));
+            this.els.loader.style.display = 'none';
+            this.startAdventureStage(0);
+        } catch (e) {
+            console.error(e);
+            this.els.loader.innerHTML = "資料讀取失敗<br>請檢查網路連線";
+        }
+    }
+
+    async fetchPokemon(config) {
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${config.id}`);
+        const data = await res.json();
+        
+        const moves = await Promise.all(config.customMoves.map(async (mName) => {
+            const mId = mName.toLowerCase().replace(' ', '-');
+            const mRes = await fetch(`https://pokeapi.co/api/v2/move/${mId}`);
+            const mData = await mRes.json();
+            return {
+                name: mData.names.find(n => n.language.name === 'zh-Hant')?.name || mName,
+                type: mData.type.name,
+                power: mData.power || 0,
+                acc: mData.accuracy || 100,
+                category: mData.damage_class.name,
+                originalName: mId
+            };
+        }));
+
+        let sFront, sBack;
+        // Pansage is 511 (Gen 5), so it has animated sprite
+        sFront = `${ANIM_URL}${data.id}.gif`;
+        sBack = `${ANIM_URL}back/${data.id}.gif`;
+
+        return {
+            name: config.name,
+            role: config.role,
+            id: config.id, // Needed for victory scene
+            spriteFront: sFront,
+            spriteBack: sBack,
+            spriteFrontStatic: data.sprites.front_default,
+            spriteBackStatic: data.sprites.back_default,
+            stats: {
+                maxHp: data.stats[0].base_stat * 3,
+                currentHp: data.stats[0].base_stat * 3,
+                atk: data.stats[1].base_stat,
+                def: data.stats[2].base_stat,
+                atkStage: 1.0
+            },
+            types: data.types.map(t => t.type.name),
+            moves: moves,
+            fainted: false
+        };
+    }
+
+    // --- Visual Effects Engine ---
+    playMoveVisual(moveName, type, isPlayer) {
+        const effect = MOVE_VISUALS[moveName] || (type === 'grass' ? 'buff_green' : 'impact_white');
+        const [style, colorName] = effect.split('_');
+        
+        const startX = isPlayer ? this.els.canvas.width * 0.2 : this.els.canvas.width * 0.8;
+        const startY = isPlayer ? this.els.canvas.height * 0.6 : this.els.canvas.height * 0.3;
+        const targetX = isPlayer ? this.els.canvas.width * 0.8 : this.els.canvas.width * 0.2;
+        const targetY = isPlayer ? this.els.canvas.height * 0.3 : this.els.canvas.height * 0.6;
+
+        let color = '#fff';
+        if(colorName === 'red') color = '#e74c3c';
+        if(colorName === 'blue') color = '#3498db';
+        if(colorName === 'green') color = '#2ecc71';
+        if(colorName === 'purple') color = '#9b59b6';
+        if(colorName === 'pink') color = '#ff9ff3';
+        if(colorName === 'white') color = '#ffffff';
+
+        if (style === 'projectile') this.animProjectile(startX, startY, targetX, targetY, color);
+        else if (style === 'beam') this.animBeam(startX, startY, targetX, targetY, color);
+        else if (style === 'impact') this.animImpact(targetX, targetY, color);
+        else if (style === 'buff') this.animBuff(startX, startY, color);
+        else if (style === 'weather') this.animWeather(colorName);
+    }
+
+    animProjectile(x, y, tx, ty, color) {
+        let t = 0;
+        const loop = () => {
+            t += 0.05;
+            const cx = x + (tx - x) * t;
+            const cy = y + (ty - y) * t - Math.sin(t * Math.PI) * 100; // Arc
+            
+            this.ctx.clearRect(0, 0, this.els.canvas.width, this.els.canvas.height);
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+            this.ctx.fillStyle = color;
+            this.ctx.fill();
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = color;
+
+            if (t < 1) requestAnimationFrame(loop);
+            else {
+                this.ctx.clearRect(0,0,this.els.canvas.width, this.els.canvas.height);
+                this.animImpact(tx, ty, color); // Impact on land
+            }
+        };
+        loop();
+    }
+
+    animBeam(x, y, tx, ty, color) {
+        let w = 0;
+        const loop = () => {
+            w += 20;
+            this.ctx.clearRect(0,0,this.els.canvas.width, this.els.canvas.height);
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, y);
+            this.ctx.lineTo(tx, ty);
+            this.ctx.lineWidth = w > 50 ? 100 - w : w;
+            this.ctx.strokeStyle = color;
+            this.ctx.lineCap = 'round';
+            this.ctx.globalAlpha = 0.8;
+            this.ctx.stroke();
+            this.ctx.globalAlpha = 1.0;
+
+            if (w < 100) requestAnimationFrame(loop);
+            else this.ctx.clearRect(0,0,this.els.canvas.width, this.els.canvas.height);
+        };
+        loop();
+    }
+
+    animImpact(x, y, color) {
+        let r = 0;
+        const loop = () => {
+            r += 5;
+            this.ctx.globalCompositeOperation = 'lighter';
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, r, 0, Math.PI*2);
+            this.ctx.fillStyle = color;
+            this.ctx.globalAlpha = 1 - (r/60);
+            this.ctx.fill();
+            
+            for(let i=0; i<8; i++) {
+                this.ctx.beginPath();
+                const ang = (i/8)*Math.PI*2;
+                this.ctx.moveTo(x, y);
+                this.ctx.lineTo(x + Math.cos(ang)*r*1.5, y + Math.sin(ang)*r*1.5);
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+            }
+
+            this.ctx.globalAlpha = 1.0;
+            this.ctx.globalCompositeOperation = 'source-over';
+
+            if (r < 60) requestAnimationFrame(loop);
+            else this.ctx.clearRect(0,0,this.els.canvas.width, this.els.canvas.height);
+        };
+        loop();
+    }
+
+    animBuff(x, y, color) {
+        let particles = [];
+        for(let i=0; i<10; i++) particles.push({x: x-30+Math.random()*60, y: y, vy: 1+Math.random()*2, life: 1});
+        
+        const loop = () => {
+            this.ctx.clearRect(0,0,this.els.canvas.width, this.els.canvas.height);
+            let alive = false;
+            particles.forEach(p => {
+                p.y -= p.vy;
+                p.life -= 0.02;
+                if(p.life > 0) {
+                    alive = true;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+                    this.ctx.fillStyle = color;
+                    this.ctx.globalAlpha = p.life;
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = 'white';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                }
+            });
+            this.ctx.globalAlpha = 1.0;
+            if(alive) requestAnimationFrame(loop);
+        };
+        loop();
+    }
+
+    animWeather(type) {
+        let t = 0;
+        let color = type === 'rain' ? 'rgba(0,0,100,0.3)' : (type === 'sun' ? 'rgba(255,200,0,0.3)' : 'rgba(0,255,0,0.2)');
+        const loop = () => {
+            t += 0.05;
+            this.ctx.clearRect(0,0,this.els.canvas.width, this.els.canvas.height);
+            this.ctx.fillStyle = color;
+            this.ctx.globalAlpha = Math.sin(t*Math.PI);
+            this.ctx.fillRect(0,0,this.els.canvas.width, this.els.canvas.height);
+            this.ctx.globalAlpha = 1.0;
+            if(t < 1) requestAnimationFrame(loop);
+        };
+        loop();
+    }
+
+    // --- Game Logic ---
+
+    async startAdventureStage(idx) {
+        if (idx >= STAGES.length) {
+            this.showVictoryScene(); 
+            return;
+        }
+
+        this.currentStageIdx = idx;
+        const stage = STAGES[idx];
+        this.state = 'ADVENTURE';
+        this.isBossFight = false;
+
+        this.els.scene.className = stage.bg;
+        this.els.enemyHud.style.opacity = 0;
+        this.els.playerHud.style.opacity = 0;
+        this.els.pSprite.style.opacity = 0;
+        this.els.eSprite.style.opacity = 0;
+        this.els.partyMenu.style.display = 'none';
+        this.els.bagMenu.style.display = 'none';
+        this.els.mainMenu.style.display = 'none';
+
+        this.typewriter(`${stage.name}\n${stage.intro}`);
+        await this.wait(2500);
+
+        try {
+            this.typewriter("敵人出現了！");
+            const enemy = await this.fetchPokemon(stage.enemyConfig);
+            this.eTeam = [enemy];
+            this.renderEnemy(enemy);
+            await this.wait(1000);
+            
+            this.typewriter("要派誰上場應戰呢？");
+            await this.wait(1000);
+            this.openPartyMenu(true);
+
+        } catch(e) { console.error(e); }
+    }
+
+    // New Boss Start Logic
+    async startBossBattle() {
+        // Revive All
+        this.pTeam.forEach(p => {
+            p.fainted = false;
+            p.stats.currentHp = p.stats.maxHp;
+        });
+        
+        this.isBossFight = true;
+        this.state = 'ADVENTURE';
+        
+        this.els.moveMenu.style.display = 'none';
+        this.els.bagMenu.style.display = 'none';
+        this.els.partyMenu.style.display = 'none';
+        this.els.mainMenu.style.display = 'none'; // Hide buttons
+        
+        // Reset Scene
+        this.els.scene.className = BOSS_STAGE.bg;
+        this.els.enemyHud.style.opacity = 0;
+        this.els.playerHud.style.opacity = 0;
+        this.els.pSprite.style.opacity = 0;
+        this.els.eSprite.style.opacity = 0;
+
+        this.typewriter(`${BOSS_STAGE.name}\n${BOSS_STAGE.intro}`);
+        await this.wait(3000);
+
+        try {
+            const enemy = await this.fetchPokemon(BOSS_STAGE.enemyConfig);
+            // Boost Boss HP
+            enemy.stats.maxHp *= 1.5;
+            enemy.stats.currentHp = enemy.stats.maxHp;
+            
+            this.eTeam = [enemy];
+            this.renderEnemy(enemy);
+            
+            await this.wait(1000);
+            this.typewriter("全隊復活！\n準備迎接最終挑戰！");
+            await this.wait(1500);
+            
+            this.openPartyMenu(true);
+        } catch(e) { console.error(e); }
+    }
+
+    renderEnemy(enemy) {
+        this.els.eSprite.style.display = 'block'; 
+        this.els.eSprite.src = enemy.spriteFront;
+        this.els.eSprite.onerror = () => { 
+            this.els.eSprite.src = enemy.spriteFrontStatic; 
+            this.els.eSprite.style.display = 'block';
+        };
+        
+        this.els.eSprite.style.opacity = 1;
+        this.els.enemyHud.style.opacity = 1;
+        this.els.eName.innerText = enemy.name;
+        this.updateHpBars(false);
+        this.renderBadges('e-badges', [this.getRoleBadgeName(enemy.role)]); 
+    }
+
+    getRoleBadgeName(role) {
+        if(role === 'sugar') return '糖癮(冰)';
+        if(role === 'lazy') return '久坐(普)';
+        if(role === 'junk') return '毒素(毒)';
+        return role;
+    }
+
+    startBattle(playerPokemonIndex) {
+        this.pActive = playerPokemonIndex;
+        const p = this.pTeam[this.pActive];
+        
+        this.els.pSprite.style.display = 'block';
+        this.els.pSprite.src = p.spriteBack;
+        this.els.pSprite.onerror = () => { 
+            this.els.pSprite.src = p.spriteBackStatic; 
+            this.els.pSprite.style.display = 'block';
+        };
+        
+        this.els.pSprite.style.opacity = 1;
+        this.els.playerHud.style.opacity = 1;
+        
+        this.renderPlayerHud();
+        this.updateHpBars();
+        
+        this.state = 'BATTLE';
+        this.els.partyMenu.style.display = 'none';
+        this.toMainMenu();
+        this.typewriter(`就決定是你了，${p.name}！`);
+    }
+
+    // --- Bag System ---
+    showBag() {
+        if(this.state !== 'BATTLE') return;
+        this.els.moveMenu.style.display = 'none';
+        this.els.mainMenu.style.display = 'none';
+        this.els.bagMenu.style.display = 'flex';
+        this.els.bagMenu.innerHTML = '<div class="overlay-title">背包物品</div>';
+
+        const itemKeys = Object.keys(this.bag);
+        if (itemKeys.length === 0) {
+            this.els.bagMenu.innerHTML += '<div style="color:white; text-align:center; padding:20px;">背包是空的...<br>請嘗試用屬性相剋打倒敵人！</div>';
+        }
+
+        itemKeys.forEach(key => {
+            if (this.bag[key] <= 0) return;
+            const itemData = ITEMS[key];
+            const slot = document.createElement('div');
+            slot.className = 'list-slot';
+            slot.innerHTML = `
+                <div class="party-info">
+                    <div>${itemData.name}</div>
+                    <div style="font-weight:normal; font-size:10px; color:#666;">${itemData.desc}</div>
+                </div>
+                <div class="item-count">x${this.bag[key]}</div>
+            `;
+            slot.onclick = () => this.useItem(key);
+            this.els.bagMenu.appendChild(slot);
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn';
+        cancelBtn.innerText = '取消';
+        cancelBtn.style.marginTop = '15px';
+        cancelBtn.onclick = () => {
+            this.els.bagMenu.style.display = 'none';
+            this.toMainMenu();
+        };
+        this.els.bagMenu.appendChild(cancelBtn);
+    }
+
+    async useItem(key) {
+        this.els.bagMenu.style.display = 'none';
+        this.bag[key]--;
+        
+        const p = this.pTeam[this.pActive];
+        const item = ITEMS[key];
+        
+        this.typewriter(`使用了 ${item.name}！`);
+        await this.wait(1000);
+
+        if (item.effect === 'heal') {
+            p.stats.currentHp = Math.min(p.stats.maxHp, p.stats.currentHp + item.value);
+            this.els.pSprite.classList.add('anim-heal');
+            this.typewriter(`${p.name} 恢復了體力！`);
+        } else if (item.effect === 'buff') {
+            p.stats.atkStage = (p.stats.atkStage || 1) + 0.5;
+            this.els.pSprite.classList.add('anim-buff');
+            this.typewriter(`${p.name} 的攻擊力提升了！`);
+        }
+
+        this.updateHpBars();
+        await this.wait(1000);
+        this.els.pSprite.classList.remove('anim-heal', 'anim-buff');
+        
+        this.state = 'BATTLE';
+        this.els.mainMenu.style.display = 'grid';
+        this.typewriter(`請選擇下一步行動！`);
+    }
+
+    // --- Party Menu ---
+
+    openPartyMenu(isForced = false) {
+        this.els.moveMenu.style.display = 'none';
+        this.els.mainMenu.style.display = 'none';
+        this.els.partyMenu.style.display = 'flex';
+        this.els.partyMenu.innerHTML = `<div class="overlay-title">${isForced ? '選擇出戰精靈' : '更換精靈'}</div>`;
+
+        this.pTeam.forEach((p, i) => {
+            const slot = document.createElement('div');
+            slot.className = `list-slot ${p.fainted ? 'fainted' : ''} ${i === this.pActive && !isForced && this.state === 'BATTLE' ? 'active' : ''}`;
+            const hpPct = (p.stats.currentHp / p.stats.maxHp) * 100;
+            const hpColor = this.getHpColor(hpPct);
+            let roleText = "";
+            if(p.role === 'fighting') roleText = "擅長：運動/自律";
+            if(p.role === 'grass') roleText = "擅長：飲食控制";
+            if(p.role === 'water') roleText = "擅長：代謝";
+
+            slot.innerHTML = `
+                <img src="${p.spriteFront}" style="width:50px;height:50px;object-fit:contain;">
+                <div class="party-info">
+                    <div>${p.name}</div>
+                    <div style="font-weight:normal; font-size:10px; color:#666;">${roleText}</div>
+                    <div class="party-hp-mini">
+                        <div class="party-hp-fill" style="width:${hpPct}%; background:${hpColor}"></div>
+                    </div>
+                </div>
+            `;
+            slot.onclick = () => {
+                if (p.fainted) return;
+                if (i === this.pActive && this.state === 'BATTLE' && !isForced) {
+                    this.typewriter(`${p.name} 已經在場上了！`);
+                    return;
+                }
+                if (this.state === 'ADVENTURE' || isForced) this.startBattle(i);
+                else if (this.state === 'BATTLE') this.performSwitchInBattle(i);
+            };
+            this.els.partyMenu.appendChild(slot);
+        });
+
+        if (!isForced && this.state === 'BATTLE') {
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn';
+            cancelBtn.innerText = '取消';
+            cancelBtn.style.marginTop = '15px';
+            cancelBtn.onclick = () => {
+                this.els.partyMenu.style.display = 'none';
+                this.toMainMenu();
+            };
+            this.els.partyMenu.appendChild(cancelBtn);
+        }
+    }
+
+    async performSwitchInBattle(newIndex) {
+        this.els.partyMenu.style.display = 'none';
+        this.state = 'BUSY';
+        this.typewriter(`${this.pTeam[this.pActive].name}，回來吧！`);
+        this.els.pSprite.style.opacity = 0;
+        await this.wait(1000);
+        this.pActive = newIndex;
+        this.startBattle(newIndex);
+        await this.wait(1000);
+        this.toMainMenu();
+        this.typewriter(`輪到 ${this.pTeam[this.pActive].name} 行動了！`);
+    }
+
+    renderPlayerHud() {
+        const p = this.pTeam[this.pActive];
+        this.els.pName.innerText = p.name;
+        this.renderBadges('p-badges', p.types);
+        this.els.moveMenu.innerHTML = '';
+        p.moves.forEach((m, idx) => {
+            const btn = document.createElement('button');
+            btn.className = `btn`;
+            btn.innerHTML = `${m.name}<div class="move-type-icon" style="color:${this.getTypeColor(m.type)}">${this.getTypeIcon(m.type)} ${m.type.toUpperCase()}</div>`;
+            btn.style.borderColor = this.getTypeColor(m.type);
+            btn.onclick = () => this.useMove(idx);
+            this.els.moveMenu.appendChild(btn);
+        });
+        const backBtn = document.createElement('button');
+        backBtn.className = 'btn';
+        backBtn.innerText = '↩ 返回';
+        backBtn.onclick = () => this.toMainMenu();
+        this.els.moveMenu.appendChild(backBtn);
+    }
+
+    renderBadges(id, types) {
+        const el = document.getElementById(id);
+        const mapType = (t) => {
+            if(t === 'normal') return '久坐'; if(t === 'ice') return '糖分';
+            if(t === 'poison') return '垃圾食物'; if(t === 'fighting') return '運動';
+            if(t === 'grass') return '纖維'; if(t === 'water') return '水分';
+            return t;
+        };
+        el.innerHTML = types.map(t => `<span class="badge" style="background:${this.getTypeColor(t)}">${mapType(t)}</span>`).join('');
+    }
+
+    updateHpBars(updatePlayer = true) {
+        if (updatePlayer) {
+            const p = this.pTeam[this.pActive];
+            const pPct = (p.stats.currentHp / p.stats.maxHp) * 100;
+            this.els.pHpBar.style.width = `${Math.max(0, pPct)}%`;
+            this.els.pHpBar.style.backgroundColor = this.getHpColor(pPct);
+            this.els.pHpText.innerText = Math.floor(Math.max(0, p.stats.currentHp));
+        }
+        if (this.eTeam.length > 0) {
+            const e = this.eTeam[0];
+            const ePct = (e.stats.currentHp / e.stats.maxHp) * 100;
+            this.els.eHpBar.style.width = `${Math.max(0, ePct)}%`;
+            this.els.eHpBar.style.backgroundColor = this.getHpColor(ePct);
+        }
+    }
+
+    toMainMenu() {
+        if(this.state !== 'BATTLE') return;
+        this.els.moveMenu.style.display = 'none';
+        this.els.bagMenu.style.display = 'none';
+        this.els.partyMenu.style.display = 'none';
+        this.els.mainMenu.style.display = 'grid';
+    }
+
+    toMoveMenu() {
+        if(this.state !== 'BATTLE') return;
+        this.els.mainMenu.style.display = 'none';
+        this.els.moveMenu.style.display = 'grid';
+    }
+
+    run() { this.typewriter("面對健康問題，\n絕對不能逃跑！"); }
+
+    async useMove(moveIndex) {
+        if (this.state !== 'BATTLE') return;
+        this.state = 'BUSY';
+        this.els.moveMenu.style.display = 'none';
+        const attacker = this.pTeam[this.pActive];
+        const defender = this.eTeam[0];
+        const move = attacker.moves[moveIndex];
+        await this.executeTurn(attacker, defender, move, true);
+        if (defender.stats.currentHp <= 0) { await this.handleFaint(defender, false); return; }
+        await this.enemyTurn();
+    }
+
+    async enemyTurn() {
+        const attacker = this.eTeam[0];
+        const defender = this.pTeam[this.pActive];
+        if (attacker.stats.currentHp <= 0) return;
+        
+        await this.wait(1000);
+
+        // BOSS MECHANIC: Attribute Change
+        if (this.isBossFight && Math.random() > 0.3) { // 70% chance to change, or keep it
+            const roles = ['sugar', 'lazy', 'junk'];
+            const newRole = roles[Math.floor(Math.random() * roles.length)];
+            
+            if (newRole !== attacker.role) {
+                attacker.role = newRole;
+                this.els.eSprite.classList.add('anim-transform');
+                
+                // Change BG
+                this.els.scene.className = `bg-boss-${newRole}`;
+                
+                let roleName = "未知";
+                if(newRole === 'sugar') roleName = "糖癮 (怕水/纖維)";
+                if(newRole === 'lazy') roleName = "久坐 (怕運動)";
+                if(newRole === 'junk') roleName = "毒素 (怕纖維)";
+
+                this.typewriter(`魔王轉換了屬性！\n現在是【${roleName}】型態！`);
+                this.renderBadges('e-badges', [this.getRoleBadgeName(newRole)]);
+                
+                await this.wait(1500);
+                this.els.eSprite.classList.remove('anim-transform');
+            }
+        }
+
+        const eMove = attacker.moves[Math.floor(Math.random() * attacker.moves.length)];
+        await this.executeTurn(attacker, defender, eMove, false);
+        if (defender.stats.currentHp <= 0) { await this.handleFaint(defender, true); }
+        else { this.state = 'BATTLE'; this.toMainMenu(); this.typewriter(`輪到 ${defender.name} 行動了！`); }
+    }
+
+    async executeTurn(attacker, defender, move, isPlayer) {
+        this.typewriter(`${attacker.name} 使用了 【${move.name}】！`);
+        await this.wait(800);
+
+        const sprite = isPlayer ? this.els.pSprite : this.els.eSprite;
+        const targetSprite = isPlayer ? this.els.eSprite : this.els.pSprite;
+        
+        sprite.classList.add(isPlayer ? 'anim-attack-p' : 'anim-attack-e');
+        this.playMoveVisual(move.originalName, move.type, isPlayer);
+        await this.wait(300);
+        sprite.classList.remove('anim-attack-p', 'anim-attack-e');
+
+        let effectiveness = 1.0;
+        let effMessage = "";
+
+        if (isPlayer) {
+            const enemyRole = defender.role;
+            const moveType = move.type;
+            if (HEALTH_TYPE_CHART[enemyRole] && HEALTH_TYPE_CHART[enemyRole][moveType]) {
+                effectiveness = HEALTH_TYPE_CHART[enemyRole][moveType];
+            }
+            if (effectiveness > 1) effMessage = "效果絕佳！ (對症下藥)";
+            if (effectiveness < 1) effMessage = "效果不好... (方法錯誤)";
+        }
+
+        let stageMod = attacker.stats.atkStage || 1.0; 
+        let damage = (move.power * (attacker.stats.atk * stageMod / defender.stats.def)) / 1.5;
+        damage *= effectiveness;
+        damage *= (0.85 + Math.random() * 0.15);
+        if (move.category === 'status') damage = 0;
+        
+        defender.stats.currentHp -= damage;
+        this.updateHpBars();
+
+        if (damage > 0) {
+            targetSprite.classList.add('anim-shake');
+            await this.wait(500);
+            targetSprite.classList.remove('anim-shake');
+        }
+
+        if (effMessage) {
+            this.typewriter(effMessage);
+            await this.wait(1500);
+        }
+
+        const eduMsg = EDU_TEXT[move.originalName] || EDU_TEXT[move.type];
+        if (eduMsg) {
+            this.typewriter(`${isPlayer ? '💡 知識' : '⚠️ 警訊'}：\n${eduMsg}`);
+            await this.wait(2000);
+        }
+    }
+
+    async handleFaint(pokemon, isPlayer) {
+        const sprite = isPlayer ? this.els.pSprite : this.els.eSprite;
+        pokemon.fainted = true;
+        this.typewriter(`${pokemon.name} 倒下了！`);
+        sprite.classList.add('anim-faint');
+        await this.wait(1500);
+        sprite.classList.remove('anim-faint');
+        sprite.style.opacity = 0;
+
+        if (!isPlayer) {
+            if (this.isBossFight) {
+                // Boss Defeated
+                this.typewriter(`終於擊敗了代謝大魔王！\n世界恢復了健康！`);
+                await this.wait(2000);
+                this.showVictoryScene();
+                return;
+            }
+
+            // Normal Drop Logic
+            const p = this.pTeam[this.pActive];
+            const enemyRole = pokemon.role; 
+            const playerRole = p.role;
+            let earnedItem = null;
+            if (enemyRole === 'lazy' && playerRole === 'fighting') earnedItem = 'protein_bar';
+            if (enemyRole === 'sugar' && (playerRole === 'water' || playerRole === 'grass')) earnedItem = 'fresh_water';
+            if (enemyRole === 'junk' && (playerRole === 'grass' || playerRole === 'water')) earnedItem = 'berry_salad';
+
+            if (earnedItem) {
+                this.bag[earnedItem] = (this.bag[earnedItem] || 0) + 1;
+                this.typewriter(`因使用了正確的健康策略...\n敵人掉落了【${ITEMS[earnedItem].name}】！`);
+                await this.wait(2500);
+            } else {
+                this.typewriter(`成功擊退了 ${pokemon.name}！\n繼續前進...`);
+                await this.wait(2000);
+            }
+
+            this.startAdventureStage(this.currentStageIdx + 1);
+        } else {
+            const hasAlive = this.pTeam.some(p => !p.fainted);
+            if (hasAlive) {
+                this.typewriter("請選擇下一隻精靈！");
+                await this.wait(1000);
+                this.openPartyMenu(true);
+            } else {
+                this.typewriter("全軍覆沒...\n請重新挑戰！");
+                await this.wait(3000);
+                this.showRestart(false);
+            }
+        }
+    }
+
+    async showVictoryScene() {
+        this.state = 'VICTORY';
+        this.els.moveMenu.style.display = 'none';
+        this.els.partyMenu.style.display = 'none';
+        this.els.bagMenu.style.display = 'none';
+        this.els.mainMenu.style.display = 'none';
+        this.els.enemyHud.style.display = 'none';
+        this.els.playerHud.style.display = 'none';
+        document.getElementById('enemy-platform').style.display = 'none';
+        document.getElementById('player-platform').style.display = 'none';
+        this.els.pSprite.style.display = 'none';
+        this.els.eSprite.style.display = 'none';
+
+        this.els.scene.className = 'bg-gym'; 
+        
+        if (!this.isBossFight) {
+            this.typewriter("恭喜！你擊敗了所有肥胖魔王！\n接下來要怎麼做呢？");
+        } else {
+            this.typewriter("太強了！你戰勝了代謝大魔王！\n你是真正的健康大師！");
+        }
+
+        const container = document.createElement('div');
+        container.style.cssText = "display:flex; justify-content:space-around; align-items:flex-end; height:100%; padding-bottom:80px; width:100%;";
+        
+        PLAYER_CONFIG.forEach((p, i) => {
+            const img = document.createElement('img');
+            img.src = `${ANIM_URL}${p.id}.gif`;
+            img.style.cssText = `
+                width: 100px; 
+                height: 100px; 
+                image-rendering: pixelated; 
+                object-fit: contain;
+                animation: jump 0.8s infinite ease-in-out;
+                animation-delay: ${i * 0.2}s;
+            `;
+            container.appendChild(img);
+        });
+
+        this.els.scene.appendChild(container);
+
+        await this.wait(4000);
+        this.showEndGameOptions();
+    }
+
+    showEndGameOptions() {
+        this.state = 'GAME_OVER';
+        this.els.mainMenu.style.display = 'flex'; 
+        this.els.mainMenu.innerHTML = '';
+        this.els.mainMenu.className = 'restart-menu'; // Use flex col layout
+        
+        const btnRestart = document.createElement('button');
+        btnRestart.className = 'restart-btn';
+        btnRestart.innerText = '🏆 再次挑戰 (從頭開始)';
+        btnRestart.onclick = () => location.reload();
+        
+        this.els.mainMenu.appendChild(btnRestart);
+
+        // Only show Boss Challenge if we just finished normal stages
+        if (!this.isBossFight) {
+            const btnBoss = document.createElement('button');
+            btnBoss.className = 'restart-btn btn-boss';
+            btnBoss.innerText = '👿 挑戰隱藏魔王 (最終試煉)';
+            btnBoss.onclick = () => {
+                // Remove victory sprites
+                const container = this.els.scene.querySelector('div');
+                if(container) container.remove();
+                
+                // Restore HUDs
+                this.els.enemyHud.style.display = 'block';
+                this.els.playerHud.style.display = 'block';
+                document.getElementById('enemy-platform').style.display = 'block';
+                document.getElementById('player-platform').style.display = 'block';
+                
+                this.startBossBattle();
+            };
+            this.els.mainMenu.appendChild(btnBoss);
+        }
+    }
+    
+    // showRestart handles Game Over (Fail)
+    showRestart(isWin) {
+        this.state = 'GAME_OVER';
+        this.els.moveMenu.style.display = 'none';
+        this.els.partyMenu.style.display = 'none';
+        this.els.bagMenu.style.display = 'none';
+        this.els.mainMenu.style.display = 'flex'; 
+        this.els.mainMenu.innerHTML = '';
+        this.els.mainMenu.className = 'restart-menu';
+        
+        const btn = document.createElement('button');
+        btn.className = 'restart-btn';
+        btn.innerText = '🔄 重新開始';
+        btn.onclick = () => location.reload();
+        this.els.mainMenu.appendChild(btn);
+    }
+
+    getHpColor(pct) { if (pct > 50) return '#48c075'; if (pct > 20) return '#f5ac38'; return '#e64e4e'; }
+    getTypeColor(type) {
+        const colors = { grass: '#78c850', fire: '#f08030', water: '#6890f0', normal: '#a8a878', fighting: '#c22e28', poison: '#a040a0', ice: '#98d8d8' };
+        return colors[type] || '#aaa';
+    }
+    getTypeIcon(type) {
+        const icons = { grass: '🌿', fire: '🔥', water: '💧', fighting: '💪', normal: '⚪', poison: '☠️', ice: '❄️' };
+        return icons[type] || '✨';
+    }
+    typewriter(text) {
+        this.els.dialogue.innerHTML = '';
+        let i = 0;
+        clearInterval(this.typeInterval);
+        this.typeInterval = setInterval(() => {
+            this.els.dialogue.innerHTML += text.charAt(i);
+            i++;
+            if (i > text.length) clearInterval(this.typeInterval);
+        }, 30);
+    }
+    advanceText() { /* optional skip */ }
+    wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+}
+
+const battle = new BattleSystem();
+</script>
+</body>
+</html>
