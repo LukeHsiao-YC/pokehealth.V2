@@ -674,10 +674,12 @@ class BattleSystem {
         this.isBossFight = true;
         this.state = 'ADVENTURE';
         
+        // Restore Main Menu UI to Battle State (Important Fix)
+        this.restoreMainMenu();
+        this.els.mainMenu.style.display = 'none'; // Hide initially for intro
         this.els.moveMenu.style.display = 'none';
         this.els.bagMenu.style.display = 'none';
         this.els.partyMenu.style.display = 'none';
-        this.els.mainMenu.style.display = 'none'; // Hide buttons
         
         // Reset Scene
         this.els.scene.className = BOSS_STAGE.bg;
@@ -1196,6 +1198,18 @@ class BattleSystem {
         btn.innerText = '🔄 重新開始';
         btn.onclick = () => location.reload();
         this.els.mainMenu.appendChild(btn);
+    }
+
+    // NEW: Function to restore standard main menu
+    restoreMainMenu() {
+        this.els.mainMenu.className = ''; // Remove restart-menu class
+        this.els.mainMenu.style.display = 'grid';
+        this.els.mainMenu.innerHTML = `
+            <button class="btn" onclick="battle.toMoveMenu()">⚔️ 戰鬥</button>
+            <button class="btn" onclick="battle.showBag()">🎒 背包</button>
+            <button class="btn" onclick="battle.openPartyMenu(false)">👥 精靈</button>
+            <button class="btn" onclick="battle.run()">🏃 逃跑</button>
+        `;
     }
 
     getHpColor(pct) { if (pct > 50) return '#48c075'; if (pct > 20) return '#f5ac38'; return '#e64e4e'; }
