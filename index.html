@@ -214,15 +214,16 @@
         <div id="enemy-hud" class="hud-box" style="opacity:0;">
             <div class="name-row"><span id="e-name">...</span></div>
             <div class="hp-container"><div id="e-hp-bar" class="hp-bar"></div></div>
-            <!-- Added HP text for enemy -->
-            <div class="hp-text"><span id="e-hp-cur">0</span> / <span id="e-hp-max">0</span></div>
+            <!-- Modified HP text to show only current HP -->
+            <div class="hp-text">HP: <span id="e-hp-cur">0</span></div>
             <div class="status-badges" id="e-badges"></div>
         </div>
 
         <div id="player-hud" class="hud-box" style="opacity:0;">
             <div class="name-row"><span id="p-name">...</span></div>
             <div class="hp-container"><div id="p-hp-bar" class="hp-bar"></div></div>
-            <div class="hp-text"><span id="p-hp-cur">0</span> / <span id="p-hp-max">0</span></div>
+            <!-- Modified HP text to show only current HP -->
+            <div class="hp-text">HP: <span id="p-hp-cur">0</span></div>
             <div class="status-badges" id="p-badges"></div>
         </div>
 
@@ -252,48 +253,61 @@
 </div>
 
 <script>
+// --- Custom HP Configuration ---
+// 這裡可以手動設定每隻寶可夢的血量 (Key是ID, Value是血量)
+const CUSTOM_HP_CONFIG = {
+    68: 300,  // 怪力
+    511: 280, // 花椰猴
+    9: 350,   // 水箭龜
+    448: 250, // 路卡利歐
+    287: 200, // 懶人獺
+    584: 300, // 雙倍多多冰
+    143: 500, // 卡比獸
+    89: 350,  // 臭臭泥
+    150: 1500 // 代謝大魔王 (超夢)
+};
+
 // --- Custom Move Power Configuration ---
-// 這裡可以手動調整每一招的攻擊力 (Power)
 const CUSTOM_MOVE_STATS = {
     // Player Moves
     "cross-chop": 90,
     "vital-throw": 70,
     "strength": 80,
-    "bulk-up": 20,    // Status move
+    "bulk-up": 0,    
     "seed-bomb": 80,
     "energy-ball": 90,
-    "grass-knot": 75, // Weight based usually, but fixed here
-    "work-up": 30,    // Status move
+    "grass-knot": 75, 
+    "work-up": 0,    
     "hydro-pump": 110,
-    "aqua-ring": 50,  // Status move
-    "rain-dance": 50, // Status move
-    "protect": 20,    // Status move
+    "aqua-ring": 0,  
+    "rain-dance": 0, 
+    "protect": 0,    
     "aura-sphere": 80,
-    "calm-mind": 20,  // Status move
+    "calm-mind": 0,  
     "close-combat": 120,
     "quick-attack": 40,
 
     // Enemy Moves
-    "slack-off": 30,
-    "yawn": 40,
+    "slack-off": 50,
+    "yawn": 50,
     "scratch": 40,
-    "amnesia": 50,
+    "amnesia": 30,
     "icicle-crash": 85,
-    "sweet-scent": 60,
+    "sweet-scent": 40,
     "avalanche": 60,
     "blizzard": 110,
-    "rest": 0,
+    "rest": 50,
     "body-slam": 85,
     "snore": 50,
     "sludge-bomb": 90,
     "gunk-shot": 120,
-    "toxic": 50,
+    "toxic": 20,
     "belch": 120,
     
     // Boss Moves
-    "psychic": 120,
+    "psychic": 100,
     "recover": 0,
-    "swift": 80
+    "swift": 60
 };
 
 const PLAYER_CONFIG = [
@@ -501,6 +515,12 @@ class BattleSystem {
         sFront = `${ANIM_URL}${data.id}.gif`;
         sBack = `${ANIM_URL}back/${data.id}.gif`;
 
+        // Determine HP
+        let hp = data.stats[0].base_stat * 3;
+        if (CUSTOM_HP_CONFIG.hasOwnProperty(config.id)) {
+            hp = CUSTOM_HP_CONFIG[config.id];
+        }
+
         return {
             name: config.name,
             role: config.role,
@@ -510,8 +530,8 @@ class BattleSystem {
             spriteFrontStatic: data.sprites.front_default,
             spriteBackStatic: data.sprites.back_default,
             stats: {
-                maxHp: data.stats[0].base_stat * 3,
-                currentHp: data.stats[0].base_stat * 3,
+                maxHp: hp,
+                currentHp: hp,
                 atk: data.stats[1].base_stat,
                 def: data.stats[2].base_stat,
                 atkStage: 1.0
@@ -730,9 +750,9 @@ class BattleSystem {
 
         try {
             const enemy = await this.fetchPokemon(BOSS_STAGE.enemyConfig);
-            // Boost Boss HP significantly: 5x
-            enemy.stats.maxHp *= 5.0; 
-            enemy.stats.currentHp = enemy.stats.maxHp;
+            // Don't multiply Boss HP here as it's already set in CUSTOM_HP_CONFIG
+            // enemy.stats.maxHp *= 5.0; 
+            // enemy.stats.currentHp = enemy.stats.maxHp;
             
             this.eTeam = [enemy];
             this.renderEnemy(enemy);
@@ -961,16 +981,17 @@ class BattleSystem {
             const pPct = (p.stats.currentHp / p.stats.maxHp) * 100;
             this.els.pHpBar.style.width = `${Math.max(0, pPct)}%`;
             this.els.pHpBar.style.backgroundColor = this.getHpColor(pPct);
-            this.els.pHpText.innerText = Math.floor(Math.max(0, p.stats.currentHp)) + " / " + p.stats.maxHp;
+            // Modified: Only show current HP
+            this.els.pHpText.innerText = Math.floor(Math.max(0, p.stats.currentHp));
         }
         if (this.eTeam.length > 0) {
             const e = this.eTeam[0];
             const ePct = (e.stats.currentHp / e.stats.maxHp) * 100;
             this.els.eHpBar.style.width = `${Math.max(0, ePct)}%`;
             this.els.eHpBar.style.backgroundColor = this.getHpColor(ePct);
-            // Update Enemy Text
+            // Modified: Only show current HP for Enemy
             if (this.els.eHpText) {
-                this.els.eHpText.innerText = Math.floor(Math.max(0, e.stats.currentHp)) + " / " + e.stats.maxHp;
+                this.els.eHpText.innerText = Math.floor(Math.max(0, e.stats.currentHp));
             }
         }
     }
