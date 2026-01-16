@@ -103,7 +103,6 @@
         .anim-faint { animation: faint 1s forwards; }
         .anim-heal { filter: drop-shadow(0 0 10px #48c075); animation: pulse-green 1s; }
         .anim-buff { filter: drop-shadow(0 0 10px #e64e4e); animation: pulse-red 1s; }
-        /* Boss Transformation Animation */
         .anim-transform { animation: spin-color 1s; }
 
         @keyframes shake {
@@ -168,7 +167,7 @@
         .move-type-icon { font-size: 10px; opacity: 0.7; margin-top: 5px; }
         #move-menu { display: none; }
 
-        /* Overlays (Bag/Party) */
+        /* Overlays */
         .overlay-menu {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(30, 30, 30, 0.98); padding: 20px; flex-direction: column; gap: 10px; z-index: 50; overflow-y: auto;
         }
@@ -251,8 +250,6 @@
 </div>
 
 <script>
-/** * Game Data & Config 
- */
 const PLAYER_CONFIG = [
     { 
         id: 68, name: "怪力 (運動)", role: "fighting", 
@@ -304,10 +301,9 @@ const BOSS_STAGE = {
     name: "隱藏關卡：代謝地獄",
     bg: "bg-boss-sugar",
     intro: "所有壞習慣的集合體...代謝大魔王現身了！\n它會不斷變換屬性，請小心應對！",
-    enemyConfig: { id: 150, name: "代謝大魔王 (變幻)", role: "sugar", customMoves: ["Psychic", "Amnesia", "Recover", "Swift"] } // Mewtwo as Boss
+    enemyConfig: { id: 150, name: "代謝大魔王 (變幻)", role: "sugar", customMoves: ["Psychic", "Amnesia", "Recover", "Swift"] }
 };
 
-// Item Definitions
 const ITEMS = {
     'fresh_water': { name: "礦泉水", effect: "heal", value: 50, desc: "補充水分，恢復 50 點體力。" },
     'berry_salad': { name: "蔬果沙拉", effect: "heal", value: 100, desc: "豐富纖維，恢復 100 點體力。" },
@@ -321,29 +317,22 @@ const HEALTH_TYPE_CHART = {
 };
 
 const EDU_TEXT = {
-    // Player Moves
     "cross-chop": "交叉訓練能全面提升心肺與肌耐力！",
     "vital-throw": "核心肌群是身體穩定的關鍵，避免受傷！",
     "strength": "負重運動能增加骨質密度，預防骨折。",
     "bulk-up": "增加肌肉量可提升基礎代謝率，躺著也燃脂！",
-    
-    // Pansage Moves
     "seed-bomb": "堅果種子富含好油，保護心血管健康。",
     "energy-ball": "全穀根莖類提供身體長效的能量來源。",
     "grass-knot": "用膳食纖維把多餘的油脂綁住，排出體外！",
     "work-up": "設立健康的飲食目標，一步步激勵自己達成。",
-    
     "hydro-pump": "每天喝足 1500cc 水，促進體內廢物代謝。",
     "aqua-ring": "飯前喝水能增加飽足感，避免暴飲暴食。",
     "rain-dance": "運動流汗後，記得補充水分與電解質。",
     "protect": "拒絕含糖飲料，保護胰臟，遠離糖尿病！",
-    
     "aura-sphere": "專注當下，細嚼慢嚥讓大腦接收飽足訊號。",
     "calm-mind": "壓力大時容易暴食，深呼吸放鬆心情。",
     "close-combat": "積極對抗想偷懶的念頭，建立運動習慣！",
     "quick-attack": "把握零碎時間動一動，積少成多也能消耗熱量。",
-
-    // Enemy Moves & Boss Moves
     "slack-off": "能坐就不站，能躺就不坐，熱量消耗極低。",
     "yawn": "久坐不動會讓下肢血液循環變差，代謝變慢。",
     "scratch": "無所事事，缺乏生活目標與動力。",
@@ -359,8 +348,6 @@ const EDU_TEXT = {
     "gunk-shot": "過多飽和脂肪酸會阻塞血管，引發心血管疾病。",
     "toxic": "加工肉品含亞硝酸鹽，是致癌風險因子。",
     "belch": "狼吞虎嚥容易脹氣消化不良，增加腸胃負擔。",
-    
-    // Boss General Moves
     "psychic": "壞習慣會控制你的大腦，讓你無法抗拒誘惑！",
     "recover": "如果不徹底改變生活型態，復胖機率很高！",
     "swift": "健康殺手無所不在，隨時都可能影響你。",
@@ -387,7 +374,7 @@ class BattleSystem {
     constructor() {
         this.pTeam = [];
         this.eTeam = [];
-        this.bag = { 'fresh_water': 1 }; // Start with 1 water
+        this.bag = { 'fresh_water': 1 };
         this.pActive = 0;
         this.currentStageIdx = 0;
         this.isBossFight = false;
@@ -455,14 +442,13 @@ class BattleSystem {
         }));
 
         let sFront, sBack;
-        // Pansage is 511 (Gen 5), so it has animated sprite
         sFront = `${ANIM_URL}${data.id}.gif`;
         sBack = `${ANIM_URL}back/${data.id}.gif`;
 
         return {
             name: config.name,
             role: config.role,
-            id: config.id, // Needed for victory scene
+            id: config.id, 
             spriteFront: sFront,
             spriteBack: sBack,
             spriteFrontStatic: data.sprites.front_default,
@@ -480,7 +466,6 @@ class BattleSystem {
         };
     }
 
-    // --- Visual Effects Engine ---
     playMoveVisual(moveName, type, isPlayer) {
         const effect = MOVE_VISUALS[moveName] || (type === 'grass' ? 'buff_green' : 'impact_white');
         const [style, colorName] = effect.split('_');
@@ -523,7 +508,7 @@ class BattleSystem {
             if (t < 1) requestAnimationFrame(loop);
             else {
                 this.ctx.clearRect(0,0,this.els.canvas.width, this.els.canvas.height);
-                this.animImpact(tx, ty, color); // Impact on land
+                this.animImpact(tx, ty, color);
             }
         };
         loop();
@@ -624,8 +609,6 @@ class BattleSystem {
         loop();
     }
 
-    // --- Game Logic ---
-
     async startAdventureStage(idx) {
         if (idx >= STAGES.length) {
             this.showVictoryScene(); 
@@ -663,9 +646,7 @@ class BattleSystem {
         } catch(e) { console.error(e); }
     }
 
-    // New Boss Start Logic
     async startBossBattle() {
-        // Revive All
         this.pTeam.forEach(p => {
             p.fainted = false;
             p.stats.currentHp = p.stats.maxHp;
@@ -674,14 +655,12 @@ class BattleSystem {
         this.isBossFight = true;
         this.state = 'ADVENTURE';
         
-        // Restore Main Menu UI to Battle State (Important Fix)
         this.restoreMainMenu();
-        this.els.mainMenu.style.display = 'none'; // Hide initially for intro
+        this.els.mainMenu.style.display = 'none'; 
         this.els.moveMenu.style.display = 'none';
         this.els.bagMenu.style.display = 'none';
         this.els.partyMenu.style.display = 'none';
         
-        // Reset Scene
         this.els.scene.className = BOSS_STAGE.bg;
         this.els.enemyHud.style.opacity = 0;
         this.els.playerHud.style.opacity = 0;
@@ -693,7 +672,6 @@ class BattleSystem {
 
         try {
             const enemy = await this.fetchPokemon(BOSS_STAGE.enemyConfig);
-            // Boost Boss HP
             enemy.stats.maxHp *= 1.5;
             enemy.stats.currentHp = enemy.stats.maxHp;
             
@@ -717,6 +695,7 @@ class BattleSystem {
         };
         
         this.els.eSprite.style.opacity = 1;
+        this.els.enemyHud.style.display = 'block';
         this.els.enemyHud.style.opacity = 1;
         this.els.eName.innerText = enemy.name;
         this.updateHpBars(false);
@@ -741,6 +720,7 @@ class BattleSystem {
             this.els.pSprite.style.display = 'block';
         };
         
+        this.els.playerHud.style.display = 'block';
         this.els.pSprite.style.opacity = 1;
         this.els.playerHud.style.opacity = 1;
         
@@ -753,7 +733,6 @@ class BattleSystem {
         this.typewriter(`就決定是你了，${p.name}！`);
     }
 
-    // --- Bag System ---
     showBag() {
         if(this.state !== 'BATTLE') return;
         this.els.moveMenu.style.display = 'none';
@@ -821,8 +800,6 @@ class BattleSystem {
         this.els.mainMenu.style.display = 'grid';
         this.typewriter(`請選擇下一步行動！`);
     }
-
-    // --- Party Menu ---
 
     openPartyMenu(isForced = false) {
         this.els.moveMenu.style.display = 'none';
@@ -970,8 +947,7 @@ class BattleSystem {
         
         await this.wait(1000);
 
-        // BOSS MECHANIC: Attribute Change
-        if (this.isBossFight && Math.random() > 0.3) { // 70% chance to change, or keep it
+        if (this.isBossFight && Math.random() > 0.3) { 
             const roles = ['sugar', 'lazy', 'junk'];
             const newRole = roles[Math.floor(Math.random() * roles.length)];
             
@@ -979,7 +955,6 @@ class BattleSystem {
                 attacker.role = newRole;
                 this.els.eSprite.classList.add('anim-transform');
                 
-                // Change BG
                 this.els.scene.className = `bg-boss-${newRole}`;
                 
                 let roleName = "未知";
@@ -1064,14 +1039,12 @@ class BattleSystem {
 
         if (!isPlayer) {
             if (this.isBossFight) {
-                // Boss Defeated
                 this.typewriter(`終於擊敗了代謝大魔王！\n世界恢復了健康！`);
                 await this.wait(2000);
                 this.showVictoryScene();
                 return;
             }
 
-            // Normal Drop Logic
             const p = this.pTeam[this.pActive];
             const enemyRole = pokemon.role; 
             const playerRole = p.role;
@@ -1126,6 +1099,7 @@ class BattleSystem {
         }
 
         const container = document.createElement('div');
+        container.id = "victory-party"; // ID for cleanup
         container.style.cssText = "display:flex; justify-content:space-around; align-items:flex-end; height:100%; padding-bottom:80px; width:100%;";
         
         PLAYER_CONFIG.forEach((p, i) => {
@@ -1152,7 +1126,7 @@ class BattleSystem {
         this.state = 'GAME_OVER';
         this.els.mainMenu.style.display = 'flex'; 
         this.els.mainMenu.innerHTML = '';
-        this.els.mainMenu.className = 'restart-menu'; // Use flex col layout
+        this.els.mainMenu.className = 'restart-menu'; 
         
         const btnRestart = document.createElement('button');
         btnRestart.className = 'restart-btn';
@@ -1161,19 +1135,16 @@ class BattleSystem {
         
         this.els.mainMenu.appendChild(btnRestart);
 
-        // Only show Boss Challenge if we just finished normal stages
         if (!this.isBossFight) {
             const btnBoss = document.createElement('button');
             btnBoss.className = 'restart-btn btn-boss';
             btnBoss.innerText = '👿 挑戰隱藏魔王 (最終試煉)';
             btnBoss.onclick = () => {
-                // Remove victory sprites
-                const container = this.els.scene.querySelector('div');
+                // Remove specific victory sprites container
+                const container = document.getElementById('victory-party');
                 if(container) container.remove();
                 
                 // Restore HUDs
-                this.els.enemyHud.style.display = 'block';
-                this.els.playerHud.style.display = 'block';
                 document.getElementById('enemy-platform').style.display = 'block';
                 document.getElementById('player-platform').style.display = 'block';
                 
@@ -1183,7 +1154,6 @@ class BattleSystem {
         }
     }
     
-    // showRestart handles Game Over (Fail)
     showRestart(isWin) {
         this.state = 'GAME_OVER';
         this.els.moveMenu.style.display = 'none';
@@ -1200,9 +1170,8 @@ class BattleSystem {
         this.els.mainMenu.appendChild(btn);
     }
 
-    // NEW: Function to restore standard main menu
     restoreMainMenu() {
-        this.els.mainMenu.className = ''; // Remove restart-menu class
+        this.els.mainMenu.className = ''; 
         this.els.mainMenu.style.display = 'grid';
         this.els.mainMenu.innerHTML = `
             <button class="btn" onclick="battle.toMoveMenu()">⚔️ 戰鬥</button>
